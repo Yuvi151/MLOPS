@@ -1,0 +1,35 @@
+# Build stage
+FROM python:3.9-slim AS build-stage
+
+WORKDIR /app
+
+# Copy the necessary files
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY train.csv .
+COPY Assignment2.py .
+COPY api.py .
+
+# Train the model and save it
+RUN python Assignment2.py
+
+# Production stage
+FROM python:3.9-slim AS production-stage
+
+WORKDIR /app
+
+# Copy the trained model and other necessary files from the build stage
+COPY --from=build-stage /app/house_price_predictor.pkl /app/house_price_predictor.pkl
+COPY --from=build-stage /app/api.py /app/api.py
+COPY --from=build-stage /app/requirements.txt /app/requirements.txt
+COPY --from=build-stage /app/Assignment2.py /app/Assignment2.py 
+COPY --from=build-stage /app/train.csv /app/train.csv
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+EXPOSE 8000
+
+# Run the FastAPI application
+CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
